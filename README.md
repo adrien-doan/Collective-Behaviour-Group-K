@@ -1,46 +1,119 @@
-# Collective-Behaviour-Group-K
+# Collective Behavior Project Group K — Replicating and Extending “Guidance by Multiple Sheepdogs Including Abnormalities”
 
-### Team members:
-- Adrien Doan (adrien-doan)
-- Edita Džubur (editadzubur)
+## Team Members
+| Name | GitHub Username |
+|------|------------------|
+| Adrien Doan | [@adrien-doan](https://github.com/adrien-doan) |
+| Edita Džubur | [@editadzubur](https://github.com/editadzubur) |
 
-### Starting point:
-[Guidance by multiple sheepdogs including abnormalities](https://link.springer.com/article/10.1007/s10015-022-00807-1)
+---
 
+## Project Description
 
-### Sketch
-First, we will find more documentation and articles about this modelisation to have a good overview of the topic.
-Then we will come up with a more detailled plan in order to acheive the milestones.
+This project is part of the **Collective Behavior** course.  
+Our objective is to **replicate and extend** the model described in:
 
-In parallel, we will search for the best way to implement the model on our computers.
+> Tashiro, M., Kubo, M., Sato, H., & Yamaguchi, A. (2022).  
+> *Guidance by multiple sheepdogs including abnormalities*.  
+> *Artificial Life and Robotics*, 27, 714–725.  
+> [https://doi.org/10.1007/s10015-022-00807-1](https://doi.org/10.1007/s10015-022-00807-1)
 
-For the first report, we expect to have a clear methodology, a repartion of roles within the group and a first choice of implementation
+In this study, a flock of autonomous sheep agents (**A-sheep**) is guided by multiple sheepdog agents (**s-dogs**) using repulsive forces.  
+The paper introduces the **MSR (Mean Subsequence Reduced)** algorithm to maintain robust coordination even when some sheepdogs behave abnormally (e.g., sensor faults or conflicting goals).
 
-In the weeks after we will recreate the model and expect to acheive a model that includes the first three steps of the following plan. 
-We will test this first model in order to create a baseline before adding abnormalities.
+Our project will:
+- Reproduce this model computationally,
+- Evaluate it under various conditions (normal and abnormal dogs),
+- Propose and test potential **improvements** to the model.
 
-Plan to recreate the model in steps :
-- First model only the sheep herd.
-- Then adding one dog
-- Then adding multiple dogs
-- Then adding abnormalities
+---
 
-The first modelisations will have a low number of sheep and dog.
+## Starting Point
 
-Expected results :
-- Multiple dogs are more efficient than one because it spreads around the flock
+We begin from the mathematical model and experimental design provided in the paper.  
+The first step will be to implement the following components:
 
-We would like to have the first model and baseline for the second report.
-Then we will add abnormalities and MSR algorithm in order to compare the results with our baseline.
+- **A-sheep model:** flocking dynamics based on attraction, alignment, and repulsion.  
+- **s-dog model:** single and multiple dog behaviors with mutual repulsion.  
+- **MSR-dog agents:** versions that incorporate anomaly-tolerant cooperation (n-dog, b-dog, g-dog).  
+- **Simulation environment:** a 2D field where sheep and dogs interact and move toward a goal.
 
-Expected results :
-- MSR algorithm can help mainting the formation in presence of abnormal dog behaviour
-- Many abnormalities reduce the performance
+---
 
+##  Project Plan and Milestones
 
-With the time remaining before the final report delivery we could try to improve the model by adding one of the possible improvements from the list below.
+###  Milestone 1 — First Report (Due **November 16, 2025**)
 
-Possible improvements of the model :
-- Transforming dog vision into real vision with obstacles
-- Adapt the repulsion force between dogs in function of the flock density
-- Adding energy costs and stamina to the dogs
+**Objectives**
+- Conduct a literature review on collective behavior and shepherding algorithms.  
+- Analyze the Tashiro et al. (2022) model and MSR algorithm in detail.  
+- Define our implementation framework (Python or MATLAB) and assign group roles.  
+- Implement the **baseline model** (flock + one dog, no anomalies).  
+
+**Deliverables**
+- Updated `README.md` with finalized plan.  
+- Documented code for the basic sheep and single-dog model.  
+- Short report outlining our methodology and equations.
+
+---
+
+###  Milestone 2 — Second Report (Due **December 7, 2025**)
+
+**Objectives**
+- Extend the model to **multiple sheepdogs** and implement repulsion-based coordination.  
+- Integrate the **MSR algorithm** to handle abnormal dog behavior.  
+- Replicate some key results and figures from the original paper.  
+- Evaluate baseline vs. MSR models for performance and stability.  
+
+**Deliverables**
+- Working multi-dog simulation with and without anomalies.  
+- Preliminary performance results (success rate, guidance time).  
+- Updated report with visualizations and discussion.
+
+---
+
+###  Milestone 3 — Final Report (Due **January 11, 2026**)
+
+**Objectives**
+- Extend or improve the model with one or more new features:
+  - Simulate obstacles and realistic dog vision fields.  
+  - Make repulsion adaptive to flock density.  
+  - Introduce stamina or energy constraints for dogs.  
+- Perform a comprehensive analysis of all models.  
+- Compare our results to the baseline and MSR implementations.  
+- Prepare the final report and presentation.  
+
+**Deliverables**
+- Complete repository with code, experiments, and documentation.  
+- Final analytical report.  
+- Updated `README.md` summarizing final results and insights.
+
+---
+
+##  Expected Results
+
+- **Multiple dogs** will outperform single-dog systems by achieving spatial distribution around the flock.  
+- The **MSR algorithm** will improve resilience against abnormal agents (e.g., faulty or hacked sheepdogs).  
+- **Abnormalities** will degrade performance, but cooperative filtering (b-dog, g-dog strategies) will mitigate these effects.  
+- Larger groups of dogs will enhance stability and robustness.
+
+---
+
+##  Repository Usage
+
+This repository will serve as the main collaboration and documentation hub:
+- Track progress and iterations through commits and branches.  
+- Store all simulation code, experiment results, and reports.  
+- Use GitHub milestones and issues to follow project goals.  
+- Update this `README.md` regularly to reflect the current project status.
+
+---
+
+###  Keywords
+`Collective Behavior` · `Swarm Robotics` · `Flocking` · `MSR Algorithm` · `Anomaly Tolerance` · `Agent-Based Modeling`
+
+---
+
+### 📚 Reference
+Tashiro, M., Kubo, M., Sato, H., & Yamaguchi, A. (2022). *Guidance by multiple sheepdogs including abnormalities*. Artificial Life and Robotics, 27, 714–725.  
+[https://doi.org/10.1007/s10015-022-00807-1](https://doi.org/10.1007/s10015-022-00807-1)
