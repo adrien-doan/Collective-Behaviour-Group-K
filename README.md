@@ -4,7 +4,7 @@
 | Name | GitHub Username |
 |------|------------------|
 | Adrien Doan | [@adrien-doan](https://github.com/adrien-doan) |
-| Edita Džubur | [@editadzubur](https://github.com/editadzubur) |
+| Edita Džubur | [@eddzu](https://github.com/eddzu) |
 
 ---
 
