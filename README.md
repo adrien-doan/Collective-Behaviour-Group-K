@@ -1,4 +1,4 @@
-# Collective Behavior Project Group K — Replicating and Extending “Guidance by Multiple Sheepdogs Including Abnormalities”
+# Group K — Replicating and Extending “Guidance by Multiple Sheepdogs Including Abnormalities”
 
 ## Team Members
 | Name | GitHub Username |
@@ -42,20 +42,23 @@ The first step will be to implement the following components:
 
 ##  Project Plan and Milestones
 
-###  Milestone 1 — First Report (Due **November 16, 2025**)
+### ✅ Milestone 1 — Completion Summary
 
-**Objectives**
-- Conduct a literature review on collective behavior and shepherding algorithms.  
-- Analyze the Tashiro et al. (2022) model and MSR algorithm in detail.  
-- Define our implementation framework (Python or MATLAB) and assign group roles.  
-- Implement the **baseline model** (flock + one dog, no anomalies).  
+#### What We Achieved
 
-**Deliverables**
-- Updated `README.md` with finalized plan.  
-- Documented code for the basic sheep and single-dog model.  
-- Short report outlining our methodology and equations.
+- We went through the main literature on flocking and shepherding to understand the background of the problem.
+- We studied the Tashiro et al. (2022) model in detail, including how sheep and dogs behave in the system and how abnormal dogs are handled.
+- We built the first version of the simulation, where a single dog guides a flock using the basic rules from the paper.
+- We produced some early visual outputs showing the flock moving and the dog steering it toward the goal.
+- We wrote and formatted the first report, added figures, and organised the document into a clear structure.
+- We set up the project repository and outlined the next steps for Milestone 2.
+
+#### Team Contributions
+
+Adrien contributed by gathering the relevant literature, reviewing existing shepherding and collective-behaviour work, and preparing the initial outline and draft of the report. Edita focused on the implementation, building the first version of the flocking and single-dog system, and then refining and completing the written report.
 
 ---
+
 
 ###  Milestone 2 — Second Report (Due **December 7, 2025**)
 
@@ -101,19 +104,21 @@ The first step will be to implement the following components:
 
 ##  Repository Usage
 
-This repository will serve as the main collaboration and documentation hub:
-- Track progress and iterations through commits and branches.  
-- Store all simulation code, experiment results, and reports.  
-- Use GitHub milestones and issues to follow project goals.  
-- Update this `README.md` regularly to reflect the current project status.
+This repository is the central place for our code, documentation, and reports.  
+It also tracks our progress through commits, branches, issues, and milestones.
 
----
+#### Repository structure
+- Code: Python simulation code
+- Literature: All referenced papers used in the report
+- Report: LaTeX source, images and the final compiled PDF
 
-###  Keywords
-`Collective Behavior` · `Swarm Robotics` · `Flocking` · `MSR Algorithm` · `Anomaly Tolerance` · `Agent-Based Modeling`
+#### Running simulation
+1. Open `Code/` folder.
+2. Make sure Python (3.12.7 or newer) is installed along with `numpy` and `matplotlib` packages.
+3. Run main script: `python simulator.py`
 
----
+Parameters such as number of sheep or movement gains can be modified directly in the code.
 
-### 📚 Reference
-Tashiro, M., Kubo, M., Sato, H., & Yamaguchi, A. (2022). *Guidance by multiple sheepdogs including abnormalities*. Artificial Life and Robotics, 27, 714–725.  
-[https://doi.org/10.1007/s10015-022-00807-1](https://doi.org/10.1007/s10015-022-00807-1)
+
+
+
