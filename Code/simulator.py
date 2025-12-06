@@ -44,6 +44,11 @@ class Params:
     # Dog "behind" distance from target sheep (relative to goal)
     drive_offset: float = 5.0
 
+    # MSR param
+    msr_enabled: bool = True
+    msr_criterion: str = "b"    # "n", "b", or "g"
+    msr_f: int = 1              # number of neighbors to discard in hard MSR
+
     steps: int = 1500
 
 # ---------- Simulation ----------

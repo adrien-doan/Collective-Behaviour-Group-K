@@ -1,5 +1,6 @@
 import numpy as np
 from utils.geometry import normalize
+from utils.msr_utils import sim_b_heading, sim_g_goal, sim_n_proximity
 
 class Dog:
     def __init__(self, pos, vel, params, dog_id):
@@ -33,6 +34,39 @@ class Dog:
         
         rep = (diff / (dist**2)) * mask
         return rep.sum(axis=0)
+    
+    def compute_trusted_indices(self, other_dogs, criterion="b", f=1):
+        """
+        criterion: "n", "b", or "g"
+        returns: list of trusted Dog objects
+        """
+        M = len(other_dogs)
+        if M == 0:
+            return []
+
+        others_pos = np.array([d.pos for d in other_dogs])
+        others_vel = np.array([d.vel for d in other_dogs])
+
+        if criterion == "n":
+            scores = sim_n_proximity(self.pos, others_pos)
+        elif criterion == "b":
+            scores = sim_b_heading(self.vel, others_vel)
+        elif criterion == "g":
+            scores = sim_g_goal(self.pos, others_pos, self.params.goal)
+        else:
+            raise ValueError("Unknown criterion")
+
+        # sort indices by descending score (most similar first)
+        idx_sorted = np.argsort(-scores)
+        # number to keep:
+        keep = max(0, M - f)
+        if keep <= 0:
+            # fallback: keep all
+            trusted_idx = idx_sorted
+        else:
+            trusted_idx = idx_sorted[:keep]
+        trusted_dogs = [other_dogs[i] for i in trusted_idx]
+        return trusted_dogs
 
     def step(self, sheep_pos, other_dogs):
         p = self.params
@@ -53,12 +87,16 @@ class Dog:
         a_drive = normalize(desired[None])[0] * w
 
         #Sheep repulsion 
-
         a_sheep = self.compute_sheep_repulsion(sheep_pos)
 
         # Inter-dog repulsion 
         if len(other_dogs) > 0:
-            rep = self.compute_dog_repulsion(np.array([d.pos for d in other_dogs]))
+            # MSR
+            trusted = self.compute_trusted_indices(other_dogs, criterion=p.msr_criterion, f=p.msr_f)
+            if len(trusted) > 0:
+                rep = self.compute_dog_repulsion(np.array([d.pos for d in trusted]))
+            else:
+                rep = np.zeros(2)
         else:
             rep = np.zeros(2)
 
