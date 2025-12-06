@@ -225,8 +225,9 @@ def animate_run(n_sheep=200, n_dog = 5, steps=300, seed=4, interval_ms=1):
         return sheep_sc, dog_sc, ttl
 
     anim = animation.FuncAnimation(fig, _update, interval=interval_ms, blit=False, repeat=False,frames=270)
-    anim.save("shepherding_simulation2.gif", writer="pillow", fps=1000)
-    plt.show()
+    anim.save("results/shepherding_simulation.gif", writer="pillow", fps=1000)
+    plt.savefig("results/final_step.png")
+    #plt.show()
     plt.close(fig)
 
 # Run the demo
