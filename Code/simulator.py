@@ -2,12 +2,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 from dataclasses import dataclass, field
+from utils.geometry import normalize
+from agents.Dog import Dog
 
-# ---------- Utility ----------
-
-def normalize(vecs, eps=1e-8):
-    norms = np.linalg.norm(vecs, axis=-1, keepdims=True)
-    return vecs / (norms + eps)
 
 # ---------- Parameters ----------
 
@@ -33,6 +30,12 @@ class Params:
     # Dog gains
     Kf_drive: float = 4.0
     dog_vmax: float = 3
+    Kf_repulse: float = 7.0
+    Kf_goal: float = 2.0
+    Kf_sheep = 1.0      
+    
+    sd_radius = 20.0 # dog sheep vision radius 
+    drive_soft_radius = 10.0
 
     # Goal
     goal: np.ndarray = field(default_factory=lambda: np.array([0.0, 0.0]))
@@ -46,7 +49,7 @@ class Params:
 # ---------- Simulation ----------
 
 class ShepherdSim:
-    def __init__(self, n_sheep=80, params: Params | None = None, seed=42):
+    def __init__(self, n_sheep=80, n_dog = 1, params: Params | None = None, seed=42):
         self.rng = np.random.default_rng(seed)
         self.params = params or Params()
 
@@ -56,15 +59,18 @@ class ShepherdSim:
         self.sheep_pos[:, 1] = self.rng.uniform(30, 70, size=n_sheep)
         self.sheep_vel = self.rng.normal(scale=0.2, size=(n_sheep, 2))
 
-        # Dog starts below the flock
-        self.dog_vel = np.zeros(2, dtype=float)
 
         center = self.flock_center()
         dir_gc = center - self.params.goal          # direction goal -> flock
         dir_gc_norm = normalize(dir_gc[None, :])[0]
 
-        # Put the dog further along that direction (behind the flock)
-        self.dog_pos = center + dir_gc_norm * (self.params.drive_offset + 20.0)
+        self.dogs = []
+        for i in range(n_dog):
+            pos = center + dir_gc_norm * (self.params.drive_offset + 20 + 5*i)
+            vel = np.zeros(2)
+            self.dogs.append(Dog(pos, vel, self.params, dog_id=i))
+
+
     # ----- Helper methods -----
 
     def flock_center(self):
@@ -124,10 +130,17 @@ class ShepherdSim:
         a_coh = coh_dir.sum(axis=1) / n_nei                      # (n, 2)
 
         # Dog avoidance: repulsion from dog (1/r^2, smoother than 1/r^3)
-        dog_diff = self.sheep_pos - self.dog_pos                 # (n, 2)
-        dog_dist = np.linalg.norm(dog_diff, axis=1, keepdims=True) + 1e-8
-        dog_mask = (dog_dist < p.rd).astype(float)
-        a_dog = (dog_diff / (dog_dist ** 2)) * dog_mask          # (n, 2)
+        
+        dog_positions = np.array([dog.pos for dog in self.dogs])
+
+        diff_s_dog = self.sheep_pos[:,None,:] - dog_positions[None,:,:]     # (N,M,2)
+        dist_s_dog = np.linalg.norm(diff_s_dog, axis=-1, keepdims=True)
+        dog_mask = (dist_s_dog < p.rd).astype(float)
+
+
+        # Repulsion from all dogs → sum over dimension M
+        a_dog = (diff_s_dog / (dist_s_dog**2)) * dog_mask
+        a_dog = a_dog.sum(axis=1)
 
         # Total sheep acceleration
         sheep_acc = (
@@ -148,28 +161,12 @@ class ShepherdSim:
 
         # ----- Dog dynamics -----
 
-        # Find "front-most" sheep along goal→flock direction
-        target_pos, target_idx, dir_gc_norm = self.farthest_sheep_from_goal_dir()
-
-        # Desired drive point: behind that sheep relative to the goal
-        drive_point = target_pos + dir_gc_norm * p.drive_offset
-
-        # Dog accelerates toward drive point
-        desired = drive_point - self.dog_pos
-        a_drive = normalize(desired[None, :])[0]
-
-        dog_acc = p.Kf_drive * a_drive
-
-        self.dog_vel += p.dt * dog_acc
-        dog_speed = np.linalg.norm(self.dog_vel) + 1e-8
-        if dog_speed > p.dog_vmax:
-            self.dog_vel *= (p.dog_vmax / dog_speed)
-
-        self.dog_pos += p.dt * self.dog_vel
+        for dog in self.dogs:
+            others = [d for d in self.dogs if d.id != dog.id]
+            dog.step(self.sheep_pos, others)
 
         return {
             "all_in_goal": self.all_sheep_in_goal(),
-            "target_idx": target_idx,
         }
 
     # ----- Run loop -----
@@ -184,9 +181,9 @@ class ShepherdSim:
 
 # ---------- Animation ----------
 
-def animate_run(n_sheep=80, steps=300, seed=4, interval_ms=1):
+def animate_run(n_sheep=200, n_dog = 5, steps=300, seed=4, interval_ms=1):
     params = Params()
-    sim = ShepherdSim(n_sheep=n_sheep, params=params, seed=seed)
+    sim = ShepherdSim(n_sheep=n_sheep, n_dog = n_dog, params=params, seed=seed)
 
     fig, ax = plt.subplots(figsize=(6, 6))
     ax.set_aspect("equal", adjustable="box")
@@ -199,12 +196,19 @@ def animate_run(n_sheep=80, steps=300, seed=4, interval_ms=1):
     ax.add_artist(circle)
 
     sheep_sc = ax.scatter(sim.sheep_pos[:, 0], sim.sheep_pos[:, 1], s=10, label="Sheep")
-    dog_sc = ax.scatter([sim.dog_pos[0]], [sim.dog_pos[1]], marker="*", s=120, label="Dog", color="red")
+    dog_sc = ax.scatter(
+        [d.pos[0] for d in sim.dogs],
+        [d.pos[1] for d in sim.dogs],
+        color="red",
+        marker="*",
+        s=120,
+        label = "Dog"
+    )
     ttl = ax.set_title("Shepherding — step 0")
     ax.legend(loc="upper right")
 
-    ax.set_xlim(-70, 40)
-    ax.set_ylim(-20, 90)
+    ax.set_xlim(-80, 60)
+    ax.set_ylim(-50, 90)
 
     step_counter = {"k": 0}
 
@@ -213,7 +217,7 @@ def animate_run(n_sheep=80, steps=300, seed=4, interval_ms=1):
         step_counter["k"] += 1
 
         sheep_sc.set_offsets(sim.sheep_pos)
-        dog_sc.set_offsets(sim.dog_pos[None, :])
+        dog_sc.set_offsets([d.pos for d in sim.dogs])
         ttl.set_text(f"Shepherding — step {step_counter['k']}")
 
         if info["all_in_goal"] or step_counter["k"] >= steps:
