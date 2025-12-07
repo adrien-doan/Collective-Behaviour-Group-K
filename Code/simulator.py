@@ -13,8 +13,8 @@ class Params:
     dt: float = 0.3
 
     # Sheep-sheep interaction radii
-    rs: float = 10.0       # neighbor radius
-    r_sep: float = 2.0    # strong separation radius
+    rs: float = 10.0       
+    r_sep: float = 3.0    
 
     # Sheep-dog radius
     rd: float = 20.0
@@ -22,27 +22,27 @@ class Params:
     # Sheep gains
     Ks_sep: float = 1.8   # separation
     Ks_align: float = 0.8 # alignment
-    Ks_coh: float = 0.35   # cohesion
-    Ks_dog: float = 1.2   # dog avoidance
+    Ks_coh: float = 0.25# cohesion
+    Ks_dog: float = 5  # dog avoidance
 
-    sheep_vmax: float = 1.1
+    sheep_vmax: float = 1.0
 
     # Dog gains
-    Kf_drive: float = 4.0
-    dog_vmax: float = 3
-    Kf_repulse: float = 7.0
-    Kf_goal: float = 2.0
-    Kf_sheep = 1.0      
+    Kf_drive: float = 6.0
+    dog_vmax: float = 3.5
+    Kf_repulse: float = 100.0
+    Kf_goal: float = 2
+    Kf_sheep = 0.6      
     
     sd_radius = 20.0 # dog sheep vision radius 
     drive_soft_radius = 10.0
 
     # Goal
-    goal: np.ndarray = field(default_factory=lambda: np.array([0.0, 0.0]))
+    goal: np.ndarray = field(default_factory=lambda: np.array([30.0, -10.0]))
     goal_radius: float = 10.0
 
     # Dog "behind" distance from target sheep (relative to goal)
-    drive_offset: float = 5.0
+    drive_offset: float = 3.0
 
     # MSR param
     msr_enabled: bool = True
@@ -70,8 +70,22 @@ class ShepherdSim:
         dir_gc_norm = normalize(dir_gc[None, :])[0]
 
         self.dogs = []
+
+        # perpendicular to goal→flock direction
+        perp = np.array([-dir_gc_norm[1], dir_gc_norm[0]])
+
+        lateral_spacing = 8.0   # horizontal spacing between dogs
+        back_offset     = 25.0  # how far behind the flock they start
+
         for i in range(n_dog):
-            pos = center + dir_gc_norm * (self.params.drive_offset + 20 + 5*i)
+            lateral_offset = (i - 0.5*(n_dog-1)) * lateral_spacing
+
+            pos = (
+                center
+                + dir_gc_norm * (self.params.drive_offset + back_offset)
+                + perp * lateral_offset
+            )
+
             vel = np.zeros(2)
             self.dogs.append(Dog(pos, vel, self.params, dog_id=i))
 
@@ -186,7 +200,7 @@ class ShepherdSim:
 
 # ---------- Animation ----------
 
-def animate_run(n_sheep=200, n_dog = 5, steps=300, seed=4, interval_ms=1):
+def animate_run(n_sheep=200, n_dog = 3, steps=500, seed=4, interval_ms=1):
     params = Params()
     sim = ShepherdSim(n_sheep=n_sheep, n_dog = n_dog, params=params, seed=seed)
 
@@ -229,10 +243,10 @@ def animate_run(n_sheep=200, n_dog = 5, steps=300, seed=4, interval_ms=1):
             anim.event_source.stop()
         return sheep_sc, dog_sc, ttl
 
-    anim = animation.FuncAnimation(fig, _update, interval=interval_ms, blit=False, repeat=False,frames=270)
-    anim.save("results/shepherding_simulation.gif", writer="pillow", fps=1000)
-    plt.savefig("results/final_step.png")
-    #plt.show()
+    anim = animation.FuncAnimation(fig, _update, interval=interval_ms, blit=False, repeat=False,frames=200)
+    # anim.save("results/shepherding_simulation.gif", writer="pillow", fps=1000)
+    # plt.savefig("results/final_step.png")
+    plt.show()
     plt.close(fig)
 
 # Run the demo
