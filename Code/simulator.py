@@ -80,11 +80,10 @@ class ShepherdSim:
             vel = np.zeros(2)
             dog = Dog(pos, vel, self.params, dog_id=i + (n_dog - n_abnormal_dog), behavior= "wrong_goal")
             gap = 20
-            dog.local_params["goal"] =np.array([random.randint((int)(self.params.goal[0]) - gap, (int)(self.params.goal[0]) + gap),
-                                                 random.randint((int)(self.params.goal[1]) - gap, (int)(self.params.goal[1]) + gap)])
+            dog.local_params["goal"] =np.array([random.uniform((self.params.goal[0]) - gap, (self.params.goal[0]) + gap),
+                                                 random.uniform((self.params.goal[1]) - gap, (self.params.goal[1]) + gap)])
             self.dogs.append(dog)
             print(dog.local_params["goal"])
-
 
     # ----- Helper methods -----
 
