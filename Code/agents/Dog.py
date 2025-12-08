@@ -92,11 +92,14 @@ class Dog:
         # Inter-dog repulsion 
         if len(other_dogs) > 0:
             # MSR
-            trusted = self.compute_trusted_indices(other_dogs, criterion=p.msr_criterion, f=p.msr_f)
-            if len(trusted) > 0:
-                rep = self.compute_dog_repulsion(np.array([d.pos for d in trusted]))
+            if(p.msr_enabled):
+                trusted = self.compute_trusted_indices(other_dogs, criterion=p.msr_criterion, f=p.msr_f)
+                if len(trusted) > 0:
+                    rep = self.compute_dog_repulsion(np.array([d.pos for d in trusted]))
+                else:
+                    rep = np.zeros(2)
             else:
-                rep = np.zeros(2)
+                self.compute_dog_repulsion(np.array([d.pos for d in other_dogs]))
         else:
             rep = np.zeros(2)
 
