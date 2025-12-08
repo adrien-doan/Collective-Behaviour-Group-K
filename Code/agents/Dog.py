@@ -3,12 +3,21 @@ from utils.geometry import normalize
 from utils.msr_utils import sim_b_heading, sim_g_goal, sim_n_proximity
 
 class Dog:
-    def __init__(self, pos, vel, params, dog_id):
+    def __init__(self, pos, vel, params, dog_id, behavior = "normal"):
         self.pos = np.array(pos, dtype=float)
         self.vel = np.array(vel, dtype=float)
         self.params = params
         self.id = dog_id
-    
+        self.behavior = behavior
+
+        self.local_params = {
+            "Kf_drive": params.Kf_drive,
+            "Kf_repulse": params.Kf_repulse,
+            "Kf_sheep": params.Kf_sheep,
+            "Kf_goal": params.Kf_goal,
+            "goal": params.goal.copy(),
+        }
+        
     def select_target_sheep(self, sheep_pos, goal):
 
         center = sheep_pos.mean(axis=0)
@@ -70,9 +79,10 @@ class Dog:
 
     def step(self, sheep_pos, other_dogs):
         p = self.params
+        lp = self.local_params
 
         #  Target sheep
-        target_idx, dir_gc_norm = self.select_target_sheep(sheep_pos, p.goal)
+        target_idx, dir_gc_norm = self.select_target_sheep(sheep_pos, lp["goal"])
         target_pos = sheep_pos[target_idx]
 
         #Compute drive point 
@@ -104,14 +114,14 @@ class Dog:
             rep = np.zeros(2)
 
         #Goal repulsion for dogs
-        goal_diff = self.pos - p.goal
+        goal_diff = self.pos - lp["goal"]
         dist_g = np.linalg.norm(goal_diff) + 1e-8
         a_goal = -goal_diff / (dist_g**2)
 
 
 
         # Combined control
-        acc = p.Kf_drive * a_drive + p.Kf_sheep * a_sheep + p.Kf_repulse * rep +  p.Kf_goal * a_goal
+        acc = lp["Kf_drive"] * a_drive + lp["Kf_sheep"] * a_sheep + lp["Kf_repulse"] * rep +  lp["Kf_goal"] * a_goal
 
         # Integrate 
         self.vel += p.dt * acc

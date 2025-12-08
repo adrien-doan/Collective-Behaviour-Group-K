@@ -1,4 +1,5 @@
 import numpy as np
+import random
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 from dataclasses import dataclass, field
@@ -52,9 +53,8 @@ class Params:
     steps: int = 1500
 
 # ---------- Simulation ----------
-
 class ShepherdSim:
-    def __init__(self, n_sheep=80, n_dog = 1, params: Params | None = None, seed=42):
+    def __init__(self, n_sheep=80, n_dog = 1, n_abnormal_dog = 0, params: Params | None = None, seed=42):
         self.rng = np.random.default_rng(seed)
         self.params = params or Params()
 
@@ -70,10 +70,20 @@ class ShepherdSim:
         dir_gc_norm = normalize(dir_gc[None, :])[0]
 
         self.dogs = []
-        for i in range(n_dog):
+        for i in range(n_dog - n_abnormal_dog):
             pos = center + dir_gc_norm * (self.params.drive_offset + 20 + 5*i)
             vel = np.zeros(2)
             self.dogs.append(Dog(pos, vel, self.params, dog_id=i))
+    
+        for i in range(n_abnormal_dog):
+            pos = center + dir_gc_norm * (self.params.drive_offset + 20 + 5*i)
+            vel = np.zeros(2)
+            dog = Dog(pos, vel, self.params, dog_id=i + (n_dog - n_abnormal_dog), behavior= "wrong_goal")
+            gap = 20
+            dog.local_params["goal"] =np.array([random.randint((int)(self.params.goal[0]) - gap, (int)(self.params.goal[0]) + gap),
+                                                 random.randint((int)(self.params.goal[1]) - gap, (int)(self.params.goal[1]) + gap)])
+            self.dogs.append(dog)
+            print(dog.local_params["goal"])
 
 
     # ----- Helper methods -----
@@ -186,9 +196,11 @@ class ShepherdSim:
 
 # ---------- Animation ----------
 
-def animate_run(n_sheep=200, n_dog = 5, steps=300, seed=4, interval_ms=1):
+def animate_run(n_sheep=200, n_dog = 5, n_abnormal_dog = 1, steps=300, seed=4, interval_ms=1):
+    if (n_abnormal_dog > n_dog):
+        raise ValueError(" The number of abnormal can't be higher than the number of dogs")
     params = Params()
-    sim = ShepherdSim(n_sheep=n_sheep, n_dog = n_dog, params=params, seed=seed)
+    sim = ShepherdSim(n_sheep=n_sheep, n_dog = n_dog,  n_abnormal_dog =  n_abnormal_dog, params=params, seed=seed)
 
     fig, ax = plt.subplots(figsize=(6, 6))
     ax.set_aspect("equal", adjustable="box")
@@ -201,13 +213,29 @@ def animate_run(n_sheep=200, n_dog = 5, steps=300, seed=4, interval_ms=1):
     ax.add_artist(circle)
 
     sheep_sc = ax.scatter(sim.sheep_pos[:, 0], sim.sheep_pos[:, 1], s=10, label="Sheep")
+    normal_dogs = []
+    abnormal_dogs = []
+    for d in sim.dogs:
+        if d.behavior == "normal":
+            normal_dogs.append(d)
+        else:
+            abnormal_dogs.append(d)
+    
     dog_sc = ax.scatter(
-        [d.pos[0] for d in sim.dogs],
-        [d.pos[1] for d in sim.dogs],
+        [d.pos[0] for d in normal_dogs],
+        [d.pos[1] for d in normal_dogs],
         color="red",
         marker="*",
         s=120,
         label = "Dog"
+    )
+    a_dog_sc = ax.scatter(
+        [d.pos[0] for d in abnormal_dogs],
+        [d.pos[1] for d in abnormal_dogs],
+        color="orange",
+        marker="*",
+        s=120,
+        label = "Abnormal Dog"
     )
     ttl = ax.set_title("Shepherding — step 0")
     ax.legend(loc="upper right")
@@ -222,7 +250,8 @@ def animate_run(n_sheep=200, n_dog = 5, steps=300, seed=4, interval_ms=1):
         step_counter["k"] += 1
 
         sheep_sc.set_offsets(sim.sheep_pos)
-        dog_sc.set_offsets([d.pos for d in sim.dogs])
+        dog_sc.set_offsets([d.pos for d in normal_dogs])
+        a_dog_sc.set_offsets([d.pos for d in abnormal_dogs])
         ttl.set_text(f"Shepherding — step {step_counter['k']}")
 
         if info["all_in_goal"] or step_counter["k"] >= steps:
