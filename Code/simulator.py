@@ -38,7 +38,7 @@ class Params:
     Kf_drive: float = 4.0
     dog_vmax: float = 3
     Kf_repulse: float = 25.0
-    Kf_goal: float = 1.5
+    Kf_goal: float = 2.0
     Kf_sheep = 1.0      
     
     sd_radius = 20.0 # dog sheep vision radius 
