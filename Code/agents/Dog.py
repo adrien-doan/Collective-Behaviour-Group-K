@@ -1,6 +1,7 @@
 import numpy as np
 from utils.geometry import normalize
 from utils.msr_utils import sim_b_heading, sim_g_goal, sim_n_proximity
+from obstacle import Obstacle 
 
 class Dog:
     def __init__(self, pos, vel, params, dog_id, behavior = "normal"):
@@ -9,6 +10,7 @@ class Dog:
         self.params = params
         self.id = dog_id
         self.behavior = behavior
+        self.trusted_coverage = 0
 
         self.local_params = {
             "Kf_drive": params.Kf_drive,
@@ -76,8 +78,28 @@ class Dog:
             trusted_idx = idx_sorted[:keep]
         trusted_dogs = [other_dogs[i] for i in trusted_idx]
         return trusted_dogs
+    
+    def compute_obstacle_repulsion(self, obstacles):
+        total = np.zeros(2)
+        for obs in obstacles:
+            d, n = obs.distance_and_normal(self.pos)
+            if d < self.params.obstacle_radius:
+                total += self.params.K_obs * (1.0 / (d + 1e-8)**3) * n
+        return total
+    
+    def compute_coverage(self, sheep_pos):
+        """
+        Compute proportion of sheep in goal
+        Returns : coverage (float) between 0 and 1
+        """
+        lp = self.local_params
+        p = self. params
+        inside = np.linalg.norm(sheep_pos - lp["goal"], axis=1) < p.goal_radius
+        coverage = inside.mean()
+        return coverage
 
-    def step(self, sheep_pos, other_dogs):
+
+    def step(self, sheep_pos, other_dogs, obstacles):
         p = self.params
         lp = self.local_params
 
@@ -95,6 +117,9 @@ class Dog:
         w = np.tanh(dist / p.drive_soft_radius)
 
         a_drive = normalize(desired[None])[0] * w
+
+        if self.trusted_coverage > 0.95:
+            a_drive *= 0.5
 
         #Sheep repulsion 
         a_sheep = self.compute_sheep_repulsion(sheep_pos)
@@ -116,17 +141,26 @@ class Dog:
         #Goal repulsion for dogs
         goal_diff = self.pos - lp["goal"]
         dist_g = np.linalg.norm(goal_diff) + 1e-8
-        a_goal = -goal_diff / (dist_g**2)
+        a_goal = goal_diff / (dist_g)
 
-
+        # Obstacle repulsion
+        a_obs = self.compute_obstacle_repulsion(obstacles)
 
         # Combined control
-        acc = lp["Kf_drive"] * a_drive + lp["Kf_sheep"] * a_sheep + lp["Kf_repulse"] * rep +  lp["Kf_goal"] * a_goal
+        acc = lp["Kf_drive"] * a_drive + lp["Kf_sheep"] * a_sheep + lp["Kf_repulse"] * rep +  lp["Kf_goal"] * a_goal + p.K_obs * a_obs
 
         # Integrate 
         self.vel += p.dt * acc
+        self.vel *= (1 - 0.3 * self.trusted_coverage) 
         speed = np.linalg.norm(self.vel)
         if speed > p.dog_vmax:
             self.vel *= p.dog_vmax / speed
 
         self.pos += p.dt * self.vel
+
+        for obs in obstacles:
+            if obs.contains(self.pos):
+                # push dog to nearest boundary point
+                _, normal = obs.distance_and_normal(self.pos)
+                self.pos -= normal * self.params.obstacle_pushback
+

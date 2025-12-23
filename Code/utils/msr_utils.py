@@ -20,3 +20,15 @@ def sim_g_goal(self_pos, others_pos, goal):
     d_self = np.linalg.norm(self_pos - goal)
     d_others = np.linalg.norm(others_pos - goal, axis=1)
     return 1.0 / (np.abs(d_others - d_self) + eps)   # higher = similar distance
+
+def msr_filter(values, nb_ignored):
+    """
+    Mean-Subsequence-Reduced filter for scalar values.
+    """
+    if len(values) <= 2 * nb_ignored:
+        # Not enough values to filter safely
+        return np.mean(values)
+
+    vals = np.sort(values)
+    trimmed = vals[nb_ignored : len(vals) - nb_ignored]
+    return np.mean(trimmed)
