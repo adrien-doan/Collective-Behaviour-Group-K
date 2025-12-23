@@ -35,6 +35,9 @@ class Dog:
         diff = self.pos - other_dogs_pos
         dist = np.linalg.norm(diff, axis=1, keepdims=True) + 1e-8
         rep = diff / (dist**2)
+          # extra hard push if very close
+        close = dist < 4.0
+        rep[close[:, 0]] *= 5.0
         return rep.sum(axis=0)
     
     def compute_sheep_repulsion(self, sheep_pos):
@@ -46,7 +49,7 @@ class Dog:
         rep = (diff / (dist**2)) * mask
         return rep.sum(axis=0)
     
-    def compute_trusted_indices(self, other_dogs, criterion="b", f=1):
+    def compute_trusted_indices(self, other_dogs, criterion="n", f=1):
         """
         criterion: "n", "b", or "g"
         returns: list of trusted Dog objects
@@ -54,6 +57,8 @@ class Dog:
         M = len(other_dogs)
         if M == 0:
             return []
+        
+        return other_dogs
 
         others_pos = np.array([d.pos for d in other_dogs])
         others_vel = np.array([d.vel for d in other_dogs])
@@ -77,7 +82,9 @@ class Dog:
         else:
             trusted_idx = idx_sorted[:keep]
         trusted_dogs = [other_dogs[i] for i in trusted_idx]
-        return trusted_dogs
+        print(f"Dog {self.id} trusts dogs {[d.id for d in trusted_dogs]} based on criterion '{criterion}'")
+        
+        return [trusted_dogs]
     
     def compute_obstacle_repulsion(self, obstacles):
         total = np.zeros(2)
@@ -108,7 +115,19 @@ class Dog:
         target_pos = sheep_pos[target_idx]
 
         #Compute drive point 
-        drive_point = target_pos + dir_gc_norm * p.drive_offset
+        # drive_point = target_pos + dir_gc_norm * p.drive_offset
+        # perpendicular left/right direction
+        perp = np.array([-dir_gc_norm[1], dir_gc_norm[0]])
+
+        # spread dogs in a fan formation
+        lateral_spacing = 6.0
+        lateral_offset = (self.id - 0.5*(len(other_dogs))) * lateral_spacing
+
+        drive_point = (
+            target_pos
+            + dir_gc_norm * p.drive_offset
+            + perp * lateral_offset
+        )
         desired = drive_point - self.pos
 
 

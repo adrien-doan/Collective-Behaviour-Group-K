@@ -17,8 +17,8 @@ class Params:
     dt: float = 0.3
 
     # Sheep-sheep interaction radii
-    rs: float = 10.0       # neighbor radius
-    r_sep: float = 2.0    # strong separation radius
+    rs: float = 10.0       
+    r_sep: float = 3.0    
 
     # Sheep-dog radius
     rd: float = 20.0
@@ -29,7 +29,7 @@ class Params:
     Ks_coh: float = 0.5   # cohesion
     Ks_dog: float = 1.0   # dog avoidance
 
-    sheep_vmax: float = 1.1
+    sheep_vmax: float = 1.0
 
     sheep_rest_damping = 0.8
     stress_threshold = 0.001
@@ -49,7 +49,7 @@ class Params:
     goal_radius: float = 15.0
 
     # Dog "behind" distance from target sheep (relative to goal)
-    drive_offset: float = 5.0
+    drive_offset: float = 3.0
 
     # MSR param
     msr_enabled: bool = True
@@ -114,6 +114,21 @@ class ShepherdSim:
             while not self.valid_point(pos):
                 attempts += 1
                 pos = center + dir_gc_norm * (self.params.drive_offset + 20 + 5*i + attempts * 5.0)
+
+        # perpendicular to goal→flock direction
+        perp = np.array([-dir_gc_norm[1], dir_gc_norm[0]])
+
+        lateral_spacing = 8.0   # horizontal spacing between dogs
+        back_offset     = 25.0  # how far behind the flock they start
+
+        for i in range(n_dog):
+            lateral_offset = (i - 0.5*(n_dog-1)) * lateral_spacing
+
+            pos = (
+                center
+                + dir_gc_norm * (self.params.drive_offset + back_offset)
+                + perp * lateral_offset
+            )
 
             vel = np.zeros(2)
             self.dogs.append(Dog(pos, vel, self.params, dog_id=i))
