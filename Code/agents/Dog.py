@@ -58,7 +58,7 @@ class Dog:
         if M == 0:
             return []
         
-        return other_dogs
+        #return other_dogs
 
         others_pos = np.array([d.pos for d in other_dogs])
         others_vel = np.array([d.vel for d in other_dogs])
@@ -74,17 +74,16 @@ class Dog:
 
         # sort indices by descending score (most similar first)
         idx_sorted = np.argsort(-scores)
-        # number to keep:
+        
         keep = max(0, M - f)
         if keep <= 0:
-            # fallback: keep all
             trusted_idx = idx_sorted
         else:
             trusted_idx = idx_sorted[:keep]
         trusted_dogs = [other_dogs[i] for i in trusted_idx]
-        print(f"Dog {self.id} trusts dogs {[d.id for d in trusted_dogs]} based on criterion '{criterion}'")
+        #print(f"Dog {self.id} trusts dogs {[d.id for d in trusted_dogs]} based on criterion '{criterion}'")
         
-        return [trusted_dogs]
+        return trusted_dogs
     
     def compute_obstacle_repulsion(self, obstacles):
         total = np.zeros(2)
@@ -131,14 +130,14 @@ class Dog:
         desired = drive_point - self.pos
 
 
-        a_drive = desired / (np.linalg.norm(desired) + 1e-8)
         dist = np.linalg.norm(desired)
         w = np.tanh(dist / p.drive_soft_radius)
 
         a_drive = normalize(desired[None])[0] * w
 
-        if self.trusted_coverage > 0.95:
-            a_drive *= 0.5
+        # Sheep in goal zone
+        #if self.trusted_coverage > 0.95:
+        #    a_drive *= 0.75
 
         #Sheep repulsion 
         a_sheep = self.compute_sheep_repulsion(sheep_pos)
@@ -153,7 +152,7 @@ class Dog:
                 else:
                     rep = np.zeros(2)
             else:
-                self.compute_dog_repulsion(np.array([d.pos for d in other_dogs]))
+                rep = self.compute_dog_repulsion(np.array([d.pos for d in other_dogs]))
         else:
             rep = np.zeros(2)
 
@@ -163,15 +162,38 @@ class Dog:
         a_goal = goal_diff / (dist_g)
 
         # Obstacle repulsion
-        a_obs = self.compute_obstacle_repulsion(obstacles)
+        #a_obs = self.compute_obstacle_repulsion(obstacles)
 
         # Combined control
-        acc = lp["Kf_drive"] * a_drive + lp["Kf_sheep"] * a_sheep + lp["Kf_repulse"] * rep +  lp["Kf_goal"] * a_goal + p.K_obs * a_obs
+        acc = lp["Kf_drive"] * a_drive + lp["Kf_sheep"] * a_sheep + lp["Kf_repulse"] * rep +  lp["Kf_goal"] * a_goal  # + p.K_obs * a_obs
 
+        # Check blocking obstacle
+
+        # Predicted motion direction
+        v_pred = self.vel + p.dt * acc
+        speed = np.linalg.norm(v_pred)
+
+        if speed > 1e-6:
+            move_dir = v_pred / speed
+
+            for obs in obstacles:
+                hit_dist, normal = obs.ray_intersection_normal(
+                    self.pos,
+                    move_dir,
+                    self.params.obstacle_radius
+                )
+
+                if normal is not None:
+                    inward = np.dot(acc, normal)
+                    if inward < 0:
+                        acc = acc - inward * normal
+                        acc *= 100 * 1 / hit_dist
+            
         # Integrate 
         self.vel += p.dt * acc
-        self.vel *= (1 - 0.3 * self.trusted_coverage) 
+        #self.vel *= (1 - 0.3 * self.trusted_coverage) 
         speed = np.linalg.norm(self.vel)
+
         if speed > p.dog_vmax:
             self.vel *= p.dog_vmax / speed
 

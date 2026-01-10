@@ -26,17 +26,17 @@ class Params:
     # Sheep gains
     Ks_sep: float = 4.5   # separation
     Ks_align: float = 0.01 # alignment
-    Ks_coh: float = 0.5   # cohesion
+    Ks_coh: float = 0.75   # cohesion
     Ks_dog: float = 1.0   # dog avoidance
 
     sheep_vmax: float = 1.0
 
-    sheep_rest_damping = 0.8
+    sheep_rest_damping = 0.4
     stress_threshold = 0.001
 
     # Dog gains
     Kf_drive: float = 4.0
-    dog_vmax: float = 3
+    dog_vmax: float = 2.5
     Kf_repulse: float = 25.0
     Kf_goal: float = 2.0
     Kf_sheep = 1.0      
@@ -58,18 +58,17 @@ class Params:
 
     # Obstacle
     K_obs = 1.0
-    obstacle_radius = 3.0 # distance obstacle taken account of
+    obstacle_radius = 5.0 #distance obstacle taken account of
     obstacle_pushback = 1.0
 
     steps: int = 1500
 
 # ---------- Simulation ----------
 class ShepherdSim:
-    def __init__(self, n_sheep=80, n_dog = 1, n_abnormal_dog = 0, params: Params | None = None, seed=42):
+    def __init__(self, n_sheep=80, n_dog = 1, n_abnormal_dog = 0, n_obstacle = 0, params: Params | None = None, seed=42):
         self.rng = np.random.default_rng(seed)
         self.params = params or Params()
 
-        n_obstacle = 5
         self.obstacles = []
         for i in range(n_obstacle):
             # choose random center in your world bounds
@@ -121,7 +120,7 @@ class ShepherdSim:
         lateral_spacing = 8.0   # horizontal spacing between dogs
         back_offset     = 25.0  # how far behind the flock they start
 
-        for i in range(n_dog):
+        for i in range(n_dog - n_abnormal_dog):
             lateral_offset = (i - 0.5*(n_dog-1)) * lateral_spacing
 
             pos = (
@@ -138,7 +137,7 @@ class ShepherdSim:
             vel = np.zeros(2)
             dog = Dog(pos, vel, self.params, dog_id=i + (n_dog - n_abnormal_dog), behavior= "wrong_goal")
             gap = 20
-            dog.local_params["goal"] =np.array([-40,-40])
+            dog.local_params["goal"] =np.array([40,-40])
             self.dogs.append(dog)
 
     # ----- Helper methods -----
@@ -183,6 +182,16 @@ class ShepherdSim:
         diffs = self.sheep_pos - self.params.goal
         d2 = np.einsum("ij,ij->i", diffs, diffs)
         return np.all(d2 <= self.params.goal_radius ** 2)
+    
+    def compute_true_coverage(self, sheep_pos):
+        """
+        Compute proportion of sheep in goal
+        Returns : coverage (float) between 0 and 1
+        """
+        p = self. params
+        inside = np.linalg.norm(sheep_pos - p.goal, axis=1) < p.goal_radius
+        coverage = inside.mean()
+        return coverage
 
     # ----- Physics step -----
 
@@ -241,14 +250,13 @@ class ShepherdSim:
             p.Ks_align * a_align +
             p.Ks_coh   * a_coh +
             p.Ks_dog   * a_dog +
-            p.K_obs    * a_obs -
-            1e-1       * np.abs(self.sheep_vel) * self.sheep_vel
+            p.K_obs    * a_obs - 1e-1       * np.abs(self.sheep_vel) * self.sheep_vel
         )
 
         dog_pressure = np.linalg.norm(a_dog, axis=1)
         #print(dog_pressure)
-        low_stress = dog_pressure < p.stress_threshold
-        sheep_acc[low_stress] -= p.sheep_rest_damping * self.sheep_vel[low_stress]
+        #low_stress = dog_pressure < p.stress_threshold
+        #sheep_acc[low_stress] -= p.sheep_rest_damping * self.sheep_vel[low_stress]
 
         # Update sheep velocity and clamp speed
         self.sheep_vel += p.dt * sheep_acc
@@ -283,8 +291,9 @@ class ShepherdSim:
             others = [d for d in self.dogs if d.id != dog.id]
             dog.step(self.sheep_pos, others, self.obstacles)
 
+        proportion_sheep_in_goal = self.compute_true_coverage(self.sheep_pos)
         return {
-            "all_in_goal": self.all_sheep_in_goal(),
+            "all_in_goal": proportion_sheep_in_goal >= 0.95,
         }
 
     # ----- Run loop -----
@@ -299,11 +308,11 @@ class ShepherdSim:
 
 # ---------- Animation ----------
 
-def animate_run(n_sheep=200, n_dog = 5, n_abnormal_dog = 0, steps=1500, seed=4, interval_ms=1):
+def animate_run(n_sheep=200, n_dog = 3, n_abnormal_dog = 0, n_obstacles = 0, steps=1500, seed=4, interval_ms=1):
     if (n_abnormal_dog > n_dog):
         raise ValueError(" The number of abnormal can't be higher than the number of dogs")
     params = Params()
-    sim = ShepherdSim(n_sheep=n_sheep, n_dog = n_dog,  n_abnormal_dog =  n_abnormal_dog, params=params, seed=seed)
+    sim = ShepherdSim(n_sheep=n_sheep, n_dog = n_dog,  n_abnormal_dog =  n_abnormal_dog, n_obstacle = n_obstacles, params=params, seed=seed)
 
     fig, ax = plt.subplots(figsize=(6, 6))
     ax.set_aspect("equal", adjustable="box")
@@ -362,6 +371,13 @@ def animate_run(n_sheep=200, n_dog = 5, n_abnormal_dog = 0, steps=1500, seed=4, 
 
     step_counter = {"k": 0}
 
+    def frame_generator(sim, max_steps):
+        for k in range(max_steps):
+            info = sim.step()
+            yield info
+            if info["all_in_goal"]:
+                break
+
     def _update(frame):
         info = sim.step()
         step_counter["k"] += 1
@@ -372,17 +388,15 @@ def animate_run(n_sheep=200, n_dog = 5, n_abnormal_dog = 0, steps=1500, seed=4, 
             a_dog_sc.set_offsets([d.pos for d in abnormal_dogs])
         ttl.set_text(f"Shepherding — step {step_counter['k']}")
 
-        if info["all_in_goal"] or step_counter["k"] >= steps:
-            anim.event_source.stop()
         return sheep_sc, dog_sc, ttl
 
-    anim = animation.FuncAnimation(fig, _update, interval=interval_ms, blit=False, repeat=False,frames=steps)
+    anim = animation.FuncAnimation(fig, _update, interval=interval_ms, blit=False, repeat=False,frames=frame_generator(sim, steps), cache_frame_data=False)
 
     timestamp = str(datetime.datetime.now())
     timestamp = timestamp.split(".")[0].replace(" ", "_").replace(":","-")
 
     anim.save("results/shepherding_simulation-" + timestamp + ".gif", writer="pillow", fps=1000)
-    plt.savefig("results/final_step.png")
+    plt.savefig("results/shepherding_simulation-" + timestamp + "final_step.png")
     #plt.show()
     plt.close(fig)
 
