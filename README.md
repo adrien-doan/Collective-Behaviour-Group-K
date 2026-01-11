@@ -117,7 +117,16 @@ It also tracks our progress through commits, branches, issues, and milestones.
 2. Make sure Python (3.12.7 or newer) is installed along with `numpy` and `matplotlib` packages.
 3. Run main script: `python simulator.py`
 
-Parameters such as number of sheep or movement gains can be modified directly in the code.
+Parameters regarding the number of sheep, dogs, abnormal dogs, obstacles and steps can be modified in the function 'animate_run' in the file 'Code/simulator.py'.
+
+Example :
+
+```
+def animate_run(n_sheep=200, n_dog = 3, n_abnormal_dog = 0, n_obstacles = 0, steps=1500, seed=4, interval_ms=1):
+```
+
+
+Parameters regarding the movement gains, forces, range and MSR type can be modified in the class 'Params' in the file 'Code/simulator.py'.
 
 
 
