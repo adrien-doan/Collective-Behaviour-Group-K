@@ -102,6 +102,17 @@ Adrien contributed by gathering the relevant literature, reviewing existing shep
 
 ---
 
+## Achieved goals
+
+- Recreation of Tashiro and al. model of shepherding with multiple dogs including abnormalities: 
+  - Set of repulsive forces
+  - Multiple dog agents
+  - Abnormal dog behaviour
+  - MSR algorithm correction
+- Extend model with  obstacles and realistic dog vision of obstacles with adaptive behaviour. 
+
+---
+
 ##  Repository Usage
 
 This repository is the central place for our code, documentation, and reports.  
