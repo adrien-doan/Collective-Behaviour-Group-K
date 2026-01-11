@@ -25,7 +25,7 @@ class Params:
 
     # Sheep gains
     Ks_sep: float = 4.5   # separation
-    Ks_align: float = 0.01 # alignment
+    Ks_align: float = 0.10 # alignment
     Ks_coh: float = 0.75   # cohesion
     Ks_dog: float = 1.0   # dog avoidance
 
@@ -223,8 +223,7 @@ class ShepherdSim:
         coh_dir *= neighbor_mask[..., None]
         a_coh = coh_dir.sum(axis=1) / n_nei                      # (n, 2)
 
-        # Dog avoidance: repulsion from dog (1/r^2, smoother than 1/r^3)
-        
+        # Dog avoidance
         dog_positions = np.array([dog.pos for dog in self.dogs])
 
         diff_s_dog = self.sheep_pos[:,None,:] - dog_positions[None,:,:]     # (N,M,2)
@@ -250,13 +249,9 @@ class ShepherdSim:
             p.Ks_align * a_align +
             p.Ks_coh   * a_coh +
             p.Ks_dog   * a_dog +
-            p.K_obs    * a_obs - 1e-1       * np.abs(self.sheep_vel) * self.sheep_vel
+            p.K_obs    * a_obs 
+            - 1e-1      * np.abs(self.sheep_vel) * self.sheep_vel  # Friction
         )
-
-        dog_pressure = np.linalg.norm(a_dog, axis=1)
-        #print(dog_pressure)
-        #low_stress = dog_pressure < p.stress_threshold
-        #sheep_acc[low_stress] -= p.sheep_rest_damping * self.sheep_vel[low_stress]
 
         # Update sheep velocity and clamp speed
         self.sheep_vel += p.dt * sheep_acc
@@ -266,15 +261,6 @@ class ShepherdSim:
 
         # Update sheep positions
         self.sheep_pos += p.dt * self.sheep_vel
-
-        # for obs in self.obstacles:
-        #     for i in range(self.sheep_pos.shape[0]):
-        #         pos = self.sheep_pos[i]
-        #         if obs.contains(pos):
-        #             d, n = obs.distance_and_normal(pos)
-        #             # Push sheep out
-        #             self.sheep_pos[i] += n * self.params.obstacle_pushback
-
 
         # ----- Dog dynamics -----
 
@@ -397,7 +383,6 @@ def animate_run(n_sheep=200, n_dog = 3, n_abnormal_dog = 0, n_obstacles = 0, ste
 
     anim.save("results/shepherding_simulation-" + timestamp + ".gif", writer="pillow", fps=1000)
     plt.savefig("results/shepherding_simulation-" + timestamp + "final_step.png")
-    #plt.show()
     plt.close(fig)
 
 # Run the demo
